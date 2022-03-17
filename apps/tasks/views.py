@@ -6,13 +6,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from drf_util.decorators import serialize_decorator
 
-from apps.tasks.serializers import UserSerializer, UserSerializer1
-
-
-class UserViewSet(ListModelMixin, GenericViewSet):
-    permission_classes = [IsAuthenticated]
-    serializer_class = UserSerializer1
-    queryset = User.objects.none()
+from apps.tasks.serializers import UserSerializer,  UserListSerializer
 
 
 class RegisterUserView(GenericAPIView):
@@ -37,3 +31,9 @@ class RegisterUserView(GenericAPIView):
         user.save()
 
         return Response(UserSerializer(user).data)
+
+
+class UserListViewSet(ListModelMixin, GenericViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = UserListSerializer
+    queryset = User.objects.all()

@@ -32,11 +32,16 @@ class TaskViewSet(ModelViewSet):
         user = self.request.user
         if self.action in ['my']:
             return super().get_queryset().filter(user=user)
+        if self.action in ['completed']:
+            return super().get_queryset().filter(status='completed')
         return super().get_queryset()
 
     @action(detail=False, methods=['GET'])
     def my(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+    @action(detail=False, methods=['GET'])
+    def completed(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 

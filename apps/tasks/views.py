@@ -6,7 +6,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from drf_util.decorators import serialize_decorator
 
-from apps.tasks.serializers import UserSerializer,  UserListSerializer
+from apps.tasks.models import Task
+from apps.tasks.serializers import UserSerializer, UserListSerializer, TaskSerializer
 
 
 class RegisterUserView(GenericAPIView):
@@ -37,3 +38,27 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = UserListSerializer
     queryset = User.objects.all()
+
+
+class CreateTaskView(GenericAPIView):
+    serializer_class = TaskSerializer
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = ()
+
+    @serialize_decorator(UserSerializer)
+    def post(self, request):
+        validated_data = request.serializer.validated_data
+        if request.user.is_authenticated:
+            current_user = request.user
+            id = current_user.id
+
+        task = Task.objects.create(
+            title=validated_data['title'],
+            description=validated_data['description'],
+            status=validated_data['status'],
+            user=validated_data[id],
+        )
+        task.save()
+
+        return Response(UserSerializer(task).data)

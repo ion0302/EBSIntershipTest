@@ -19,3 +19,4 @@ class TaskListSerializer(ModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title']
+

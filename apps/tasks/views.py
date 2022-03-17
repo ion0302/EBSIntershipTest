@@ -1,5 +1,7 @@
+from rest_framework import mixins
+from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from apps.tasks import serializers
@@ -25,3 +27,16 @@ class TaskViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        user = self.request.user
+        if self.action in ['my']:
+            return super().get_queryset().filter(user=user)
+        return super().get_queryset()
+
+    @action(detail=False, methods=['GET'])
+    def my(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+
+

@@ -11,4 +11,4 @@ class Task(models.Model):
     description = models.TextField()
     status = models.CharField(max_length=200, choices=StatusChoise.choices,
                               default=StatusChoise.not_completed)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name="tasks", on_delete=models.CASCADE)

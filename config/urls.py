@@ -1,15 +1,9 @@
-from django.contrib import admin
 from django.urls import path, re_path, include
+from django.contrib import admin
 from rest_framework import permissions
-from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from drf_yasg.views import get_schema_view
 
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-
-from apps.tasks.views import RegisterUserView, CreateTaskView
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -21,17 +15,20 @@ schema_view = get_schema_view(
       license=openapi.License(name="BSD License"),
    ),
    public=True,
-   permission_classes=[permissions.AllowAny],
+   permission_classes=(permissions.AllowAny,),
 )
 
+
+urlpatterns_api = [
+    path('', include('apps.tasks.urls')),
+    path('', include('apps.users.urls')),
+]
+
+
+# noinspection PyUnresolvedReferences
 urlpatterns = [
     re_path(r'^(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     re_path(r'^$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('admin/', admin.site.urls),
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('users/', include('apps.tasks.urls')),
-    path('users/register/', RegisterUserView.as_view(), name='token_register'),
-    path('task/create/', CreateTaskView.as_view(), name='create_task'),
-
+    path('api/', include(urlpatterns_api)),
 ]

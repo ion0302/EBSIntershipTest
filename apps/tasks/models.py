@@ -12,3 +12,9 @@ class Task(models.Model):
     status = models.CharField(max_length=200, choices=Status.choices,
                               default=Status.NOT_COMPLETED)
     user = models.ForeignKey(User, related_name="tasks", on_delete=models.CASCADE)
+
+
+class Comment(models.Model):
+
+    text = models.TextField()
+    task = models.ForeignKey(Task, related_name="comments", on_delete=models.CASCADE)

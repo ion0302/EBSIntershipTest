@@ -1,9 +1,7 @@
-from drf_util.decorators import serialize_decorator
-from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from apps.tasks import serializers
@@ -40,7 +38,7 @@ class TaskViewSet(ModelViewSet):
             return super().get_queryset().filter(status='completed')
         return super().get_queryset()
 
-    @action(detail=False, methods=['GET'], permission_classes=[IsAuthenticated])
+    @action(detail=False, methods=['GET'])
     def my(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
@@ -48,7 +46,7 @@ class TaskViewSet(ModelViewSet):
     def status_completed(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-    @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['GET'])
     def to_completed(self, request, pk,  *args, **kwargs):
         Task.objects.filter(id=pk).update(status='completed')
         return Response({'success': True, 'detail': f'task with id:{pk}  status change to completed'})

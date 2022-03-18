@@ -5,8 +5,8 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from apps.tasks import serializers
-from apps.tasks.models import Task
-from apps.tasks.serializers import TaskSerializer, TaskPostSerializer, TaskPatchSerializer
+from apps.tasks.models import Task, Comment
+from apps.tasks.serializers import TaskSerializer, TaskPostSerializer, TaskPatchSerializer, CommentSerializer
 
 
 class TaskViewSet(ModelViewSet):
@@ -47,6 +47,22 @@ class TaskViewSet(ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     @action(detail=True, methods=['GET'])
-    def to_completed(self, request, pk,  *args, **kwargs):
+    def to_completed(self, request, pk, *args, **kwargs):
         Task.objects.filter(id=pk).update(status='completed')
         return Response({'success': True, 'detail': f'task with id:{pk}  status change to completed'})
+
+
+class CommentViewSet(ModelViewSet):
+    serializer_class = CommentSerializer
+    queryset = Comment.objects.all()
+    permission_classes = [IsAuthenticated]
+
+
+    # def get_queryset(self):
+    #     if self.action in ['tasks_comments']:
+    #         return super().get_queryset().filter(user=user)
+    #     return super().get_queryset()
+    #
+    # @action(detail=True, methods=['GET'])
+    # def tasks_comments(self, request,  *args, **kwargs):
+    #     return super().list(request, *args, **kwargs)

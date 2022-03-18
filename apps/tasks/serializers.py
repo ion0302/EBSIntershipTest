@@ -20,3 +20,9 @@ class TaskListSerializer(ModelSerializer):
         model = Task
         fields = ['id', 'title']
 
+
+class TaskPatchSerializer(ModelSerializer):
+    class Meta:
+        model = Task
+        fields = ['user']
+

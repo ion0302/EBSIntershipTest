@@ -1,12 +1,14 @@
+from drf_util.decorators import serialize_decorator
 from rest_framework import mixins
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, GenericViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from apps.tasks import serializers
 from apps.tasks.models import Task
-from apps.tasks.serializers import TaskSerializer, TaskPostSerializer
+from apps.tasks.serializers import TaskSerializer, TaskPostSerializer, TaskPatchSerializer
 
 
 class TaskViewSet(ModelViewSet):
@@ -21,6 +23,8 @@ class TaskViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return TaskPostSerializer
+        if self.request.method == 'PATCH':
+            return TaskPatchSerializer
         if self.action == 'list':
             return serializers.TaskListSerializer
         return serializers.TaskSerializer
@@ -32,7 +36,7 @@ class TaskViewSet(ModelViewSet):
         user = self.request.user
         if self.action in ['my']:
             return super().get_queryset().filter(user=user)
-        if self.action in ['completed']:
+        if self.action in ['status_completed']:
             return super().get_queryset().filter(status='completed')
         return super().get_queryset()
 
@@ -41,7 +45,17 @@ class TaskViewSet(ModelViewSet):
         return super().list(request, *args, **kwargs)
 
     @action(detail=False, methods=['GET'])
-    def completed(self, request, *args, **kwargs):
+    def status_completed(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+
+
+    # @action(detail=True, methods=['GET'])
+    # @serialize_decorator('TaskSerializer')
+    # def completed(self, request, *args, **kwargs):
+    #     task = Task.objects.filter(pk=request.valid.get('pk')).first()
+    #     task.status = Task.StatusChoise.completed
+    #     task.save()
+    #     return Response({'succes': True, 'detail': f'task {task.title} status change to completed'})
 
 

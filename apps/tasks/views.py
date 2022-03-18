@@ -40,7 +40,7 @@ class TaskViewSet(ModelViewSet):
             return super().get_queryset().filter(status='completed')
         return super().get_queryset()
 
-    @action(detail=False, methods=['GET'])
+    @action(detail=False, methods=['GET'], permission_classes=[IsAuthenticated])
     def my(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
@@ -48,14 +48,7 @@ class TaskViewSet(ModelViewSet):
     def status_completed(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
-
-
-    # @action(detail=True, methods=['GET'])
-    # @serialize_decorator('TaskSerializer')
-    # def completed(self, request, *args, **kwargs):
-    #     task = Task.objects.filter(pk=request.valid.get('pk')).first()
-    #     task.status = Task.StatusChoise.completed
-    #     task.save()
-    #     return Response({'succes': True, 'detail': f'task {task.title} status change to completed'})
-
-
+    @action(detail=True, methods=['GET'], permission_classes=[IsAuthenticated])
+    def to_completed(self, request, pk,  *args, **kwargs):
+        Task.objects.filter(id=pk).update(status='completed')
+        return Response({'success': True, 'detail': f'task with id:{pk}  status change to completed'})

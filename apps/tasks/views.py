@@ -1,5 +1,6 @@
+from django.core.mail import send_mail
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
@@ -7,6 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from apps.tasks import serializers
 from apps.tasks.models import Task, Comment
 from apps.tasks.serializers import TaskSerializer, TaskPostSerializer, TaskPatchSerializer, CommentSerializer
+from config import settings
 
 
 class TaskViewSet(ModelViewSet):
@@ -14,9 +16,9 @@ class TaskViewSet(ModelViewSet):
     queryset = Task.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [
-        SearchFilter,
-        OrderingFilter
+        SearchFilter
     ]
+    search_fields = ['title']
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -28,7 +30,18 @@ class TaskViewSet(ModelViewSet):
         return serializers.TaskSerializer
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        user = self.request.user
+        subject = 'Task Notification'
+        message = f'Hi {user.username}, a new task is attached to you.'
+        email_from = settings.EMAIL_HOST_USER
+        recipient_list = [user.email]
+        send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+        serializer.save(user=user)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+
+        return self.update(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user
@@ -57,12 +70,8 @@ class CommentViewSet(ModelViewSet):
     queryset = Comment.objects.all()
     permission_classes = [IsAuthenticated]
 
-
-    # def get_queryset(self):
-    #     if self.action in ['tasks_comments']:
-    #         return super().get_queryset().filter(user=user)
-    #     return super().get_queryset()
-    #
-    # @action(detail=True, methods=['GET'])
-    # def tasks_comments(self, request,  *args, **kwargs):
-    #     return super().list(request, *args, **kwargs)
+    @action(detail=True, methods=['GET'])
+    def tasks_comments(self, request, pk, *args, **kwargs):
+        queryset = Comment.objects.filter(task=pk)
+        serializer = CommentSerializer(queryset, many=True)
+        return Response(serializer.data)

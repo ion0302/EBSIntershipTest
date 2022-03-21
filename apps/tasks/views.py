@@ -60,6 +60,14 @@ class TaskViewSet(ModelViewSet):
             user = User.objects.get(pk=user_id)
             task_mail_send(self, user)
 
+        comments = Comment.objects.filter(task=task_id)
+        if comments.count() > 0 and self.request.data['status'] == 'completed':
+            subject = 'Task Notification'
+            message = f'Hi {user.username}, your task is completed.'
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [user.email]
+            send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+
         serializer.save()
 
     def get_queryset(self):

@@ -10,8 +10,8 @@ from rest_framework.permissions import IsAuthenticated
 
 from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet
-from apps.tasks.models import Task, Comment
-from apps.tasks.serializers import TaskSerializer, CommentSerializer
+from apps.tasks.models import Task, Comment, Log
+from apps.tasks.serializers import TaskSerializer, CommentSerializer, LogSerializer
 from config import settings
 
 
@@ -107,4 +107,10 @@ class CommentViewSet(ModelViewSet):
         user = task.assigned_to
         comment_mail_send(self, user)
         serializer.save()
+
+
+class LogViewSet(ModelViewSet):
+    serializer_class = LogSerializer
+    queryset = Log.objects.all()
+    permission_classes = [IsAuthenticated]
 

@@ -30,7 +30,7 @@ def comment_mail_send(self, user):
 
 class TaskViewSet(ModelViewSet):
     serializer_class = TaskSerializer
-    queryset = Task.objects.all()
+    queryset = Task.objects.all().order_by('id')
     permission_classes = [IsAuthenticated]
     filter_backends = [
         SearchFilter
@@ -94,7 +94,7 @@ class TaskViewSet(ModelViewSet):
 
 class CommentViewSet(ModelViewSet):
     serializer_class = CommentSerializer
-    queryset = Comment.objects.all()
+    queryset = Comment.objects.all().order_by('id')
     permission_classes = [IsAuthenticated]
 
     @action(detail=True, methods=['GET'])

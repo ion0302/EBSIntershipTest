@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
@@ -38,10 +39,15 @@ class TaskViewSet(ModelViewSet):
         send_mail(subject, message, email_from, recipient_list, fail_silently=False)
         serializer.save(user=user)
 
-    def partial_update(self, request, *args, **kwargs):
-        kwargs['partial'] = True
-
-        return self.update(request, *args, **kwargs)
+    def perform_update(self, serializer):
+        user_id = self.request.data['user']
+        user = User.objects.get(pk=user_id)
+        subject = 'Task Notification'
+        message = f'Hi {user.username}, a new task is attached to you.'
+        email_from = settings.EMAIL_HOST_USER
+        recipient_list = [user.email]
+        send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+        serializer.save()
 
     def get_queryset(self):
         user = self.request.user
@@ -75,3 +81,6 @@ class CommentViewSet(ModelViewSet):
         queryset = Comment.objects.filter(task=pk)
         serializer = CommentSerializer(queryset, many=True)
         return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        serializer.save()

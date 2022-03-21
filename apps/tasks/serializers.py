@@ -7,25 +7,33 @@ class TaskSerializer(ModelSerializer):
     class Meta:
         model = Task
         fields = '__all__'
+        extra_kwargs = {
+            'created_by': {'read_only': True},
+            'is_completed': {'read_only': True},
+        }
 
 
-class TaskPostSerializer(ModelSerializer):
+class TaskAssignToSerializer(ModelSerializer):
     class Meta:
         model = Task
-        read_only_fields = ['id', 'user']
-        fields = ['id', 'title', 'description', 'status', 'user']
+        fields = ['assigned_to']
+
+
+class TaskUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Task
+        fields = '__all__'
+        extra_kwargs = {
+            'created_by': {'read_only': True},
+            'is_completed': {'read_only': True},
+            'assigned_to': {'read_only': True},
+        }
 
 
 class TaskListSerializer(ModelSerializer):
     class Meta:
         model = Task
         fields = ['id', 'title']
-
-
-class TaskPatchSerializer(ModelSerializer):
-    class Meta:
-        model = Task
-        fields = ['user']
 
 
 class CommentSerializer(ModelSerializer):

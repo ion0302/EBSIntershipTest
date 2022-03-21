@@ -12,6 +12,22 @@ from apps.tasks.serializers import TaskSerializer, TaskPostSerializer, TaskPatch
 from config import settings
 
 
+def task_mail_send(self, user):
+    subject = 'Task Notification'
+    message = f'Hi {user.username}, a new task is attached to you.'
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [user.email]
+    send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+
+
+def comment_mail_send(self, user):
+    subject = 'Task Notification'
+    message = f'Hi {user.username}, a new comment is attached to your task.'
+    email_from = settings.EMAIL_HOST_USER
+    recipient_list = [user.email]
+    send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+
+
 class TaskViewSet(ModelViewSet):
     serializer_class = TaskSerializer
     queryset = Task.objects.all()
@@ -32,21 +48,13 @@ class TaskViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        subject = 'Task Notification'
-        message = f'Hi {user.username}, a new task is attached to you.'
-        email_from = settings.EMAIL_HOST_USER
-        recipient_list = [user.email]
-        send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+        task_mail_send(self, user)
         serializer.save(user=user)
 
     def perform_update(self, serializer):
         user_id = self.request.data['user']
         user = User.objects.get(pk=user_id)
-        subject = 'Task Notification'
-        message = f'Hi {user.username}, a new task is attached to you.'
-        email_from = settings.EMAIL_HOST_USER
-        recipient_list = [user.email]
-        send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+        task_mail_send(self, user)
         serializer.save()
 
     def get_queryset(self):
@@ -83,4 +91,15 @@ class CommentViewSet(ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
+        task_id = self.request.data['task']
+        task = Task.objects.get(pk=task_id)
+        user = task.user
+        comment_mail_send(self, user)
+        serializer.save()
+
+    def perform_update(self, serializer):
+        task_id = self.request.data['task']
+        task = Task.objects.get(pk=task_id)
+        user = task.user
+        comment_mail_send(self, user)
         serializer.save()

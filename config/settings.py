@@ -37,9 +37,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'django_filters',
     'rest_framework',
     'rest_framework_simplejwt',
     'drf_yasg',
+
     'apps.tasks',
 ]
 
@@ -149,3 +152,11 @@ SWAGGER_SETTINGS = {
         }
     },
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+EMAIL_HOST_USER = 'taskmanager.sender@gmail.com'
+EMAIL_HOST_PASSWORD = 'qwerty.12'
+EMAIL_USE_SSL = False

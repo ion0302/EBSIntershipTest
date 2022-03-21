@@ -52,9 +52,14 @@ class TaskViewSet(ModelViewSet):
         serializer.save(user=user)
 
     def perform_update(self, serializer):
+        task_id = self.kwargs['pk']
+        task = Task.objects.get(pk=task_id)
         user_id = self.request.data['user']
-        user = User.objects.get(pk=user_id)
-        task_mail_send(self, user)
+        user = task.user
+        if user.id != user_id:
+            user = User.objects.get(pk=user_id)
+            task_mail_send(self, user)
+
         serializer.save()
 
     def get_queryset(self):
@@ -98,8 +103,12 @@ class CommentViewSet(ModelViewSet):
         serializer.save()
 
     def perform_update(self, serializer):
+        comment_id = self.kwargs['pk']
+        comment = Comment.objects.get(pk=comment_id)
+        before_task = comment.task
         task_id = self.request.data['task']
-        task = Task.objects.get(pk=task_id)
-        user = task.user
-        comment_mail_send(self, user)
+        if task_id != before_task.id:
+            task = Task.objects.get(pk=task_id)
+            user = task.user
+            comment_mail_send(self, user)
         serializer.save()

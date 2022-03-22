@@ -22,6 +22,7 @@ schema_view = get_schema_view(
 urlpatterns_api = [
     path('', include('apps.tasks.urls')),
     path('', include('apps.users.urls')),
+    path('', include('apps.logs.urls')),
 ]
 
 

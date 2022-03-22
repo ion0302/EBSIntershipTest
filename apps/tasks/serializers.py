@@ -1,6 +1,6 @@
 from rest_framework.serializers import ModelSerializer
 
-from apps.tasks.models import Task, Comment, Log
+from apps.tasks.models import Task, Comment
 
 
 class TaskSerializer(ModelSerializer):
@@ -41,9 +41,4 @@ class CommentSerializer(ModelSerializer):
         model = Comment
         fields = '__all__'
 
-
-class LogSerializer(ModelSerializer):
-    class Meta:
-        model = Log
-        fields = '__all__'
 

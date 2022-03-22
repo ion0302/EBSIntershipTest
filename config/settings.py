@@ -43,7 +43,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'drf_yasg',
 
+    'apps.logs',
     'apps.tasks',
+
 ]
 
 MIDDLEWARE = [

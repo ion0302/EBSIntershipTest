@@ -15,9 +15,3 @@ class Comment(models.Model):
     task = models.ForeignKey(Task, related_name="comments", on_delete=models.CASCADE)
 
 
-class Log(models.Model):
-    start = models.DateTimeField(null=True)
-    stop = models.DateTimeField(null=True)
-    duration = models.DurationField(null=True)
-    task = models.ForeignKey(Task, related_name='task_log_set', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name='user_log_set', on_delete=models.CASCADE)

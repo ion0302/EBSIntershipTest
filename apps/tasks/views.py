@@ -1,17 +1,21 @@
 from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
+import datetime
 
+from apps.logs.models import Log
+from apps.logs.serializers import LogSerializer
 from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet
-from apps.tasks.models import Task, Comment, Log
-from apps.tasks.serializers import TaskSerializer, CommentSerializer, LogSerializer
+from apps.tasks.models import Task, Comment
+from apps.tasks.serializers import TaskSerializer, CommentSerializer
 from config import settings
 
 
@@ -47,7 +51,7 @@ class TaskViewSet(ModelViewSet):
             return serializers.TaskUpdateSerializer
         if self.action == 'assign_to':
             return serializers.TaskAssignToSerializer
-        if self.action == 'complete':
+        if self.action == 'complete' or 'start_log' or 'stop_log':
             return Serializer
 
         return TaskSerializer
@@ -75,7 +79,7 @@ class TaskViewSet(ModelViewSet):
 
         return Response(data=serializer.data)
 
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], url_path='assign-to')
     def assign_to(self, request, *args, **kwargs):
         instance = self.get_object()
         user = User.objects.get(pk=self.request.data['assigned_to'])
@@ -90,6 +94,33 @@ class TaskViewSet(ModelViewSet):
     def comments(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = CommentSerializer(instance.comments, many=True)
+        return Response(data=serializer.data)
+
+    @action(detail=True, methods=['POST'], url_path='start-log')
+    def start_log(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        log = Log.objects.create(
+            start=datetime.datetime.now(),
+            task=instance,
+            user=request.user
+        )
+        log.save()
+        serializer = self.get_serializer(log)
+        return Response(data=serializer.data)
+
+    @action(detail=True, methods=['POST'], url_path='stop-log')
+    def stop_log(self, request, *args, **kwargs):
+        instance = self.get_object()
+        log = Log.objects.filter(task=instance).last()
+        if log.stop != "":
+            return Response({"Error": "this log is already stopped"}, status=status.HTTP_400_BAD_REQUEST)
+        log.stop = datetime.datetime.now()
+        log.duration = datetime.timedelta(hours=log.stop.hour - log.start.hour,
+                                          minutes=log.stop.minute - log.start.minute,
+                                          seconds=log.stop.second - log.start.second)
+        log.save()
+        serializer = self.get_serializer(log)
         return Response(data=serializer.data)
 
 
@@ -107,10 +138,3 @@ class CommentViewSet(ModelViewSet):
         user = task.assigned_to
         comment_mail_send(self, user)
         serializer.save()
-
-
-class LogViewSet(ModelViewSet):
-    serializer_class = LogSerializer
-    queryset = Log.objects.all()
-    permission_classes = [IsAuthenticated]
-

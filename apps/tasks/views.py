@@ -85,6 +85,12 @@ class TaskViewSet(ModelViewSet):
         serializer = CommentSerializer(instance.comments, many=True)
         return Response(data=serializer.data)
 
+    @action(detail=True, methods=['GET'])
+    def logs(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = LogSerializer(instance.task_log_set, many=True)
+        return Response(data=serializer.data)
+
     @action(detail=True, methods=['POST'], url_path='start-log')
     def start_log(self, request, *args, **kwargs):
 

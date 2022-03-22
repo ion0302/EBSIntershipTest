@@ -1,3 +1,4 @@
+from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from apps.tasks.models import Task, Comment
@@ -18,6 +19,7 @@ class TaskSerializer(ModelSerializer):
         extra_kwargs = {
             'created_by': {'read_only': True},
             'is_completed': {'read_only': True},
+            'work_time:': {'read_only': True},
         }
 
 
@@ -35,10 +37,12 @@ class TaskUpdateSerializer(ModelSerializer):
             'created_by': {'read_only': True},
             'is_completed': {'read_only': True},
             'assigned_to': {'read_only': True},
+            'work_time:': {'read_only': True},
         }
 
 
 class TaskListSerializer(ModelSerializer):
+
     class Meta:
         model = Task
         fields = ['id', 'title']

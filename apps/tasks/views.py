@@ -96,7 +96,7 @@ class TaskViewSet(ModelViewSet):
 
         instance = self.get_object()
         test_log = Log.objects.filter(task=instance).last()
-        if test_log.stop == "":
+        if test_log.stop is None:
             return Response({"Error": "already started a log for this task"}, status=status.HTTP_400_BAD_REQUEST)
 
         log = Log.objects.create(
@@ -112,13 +112,19 @@ class TaskViewSet(ModelViewSet):
     def stop_log(self, request, *args, **kwargs):
         instance = self.get_object()
         log = Log.objects.filter(task=instance).last()
-        if log.stop != "":
+        if log.stop is not None:
             return Response({"Error": "this log is already stopped"}, status=status.HTTP_400_BAD_REQUEST)
         log.stop = datetime.datetime.now()
-        log.duration = datetime.timedelta(hours=log.stop.hour - log.start.hour,
-                                          minutes=log.stop.minute - log.start.minute,
-                                          seconds=log.stop.second - log.start.second)
+        task = log.task
+        duration = datetime.timedelta(hours=log.stop.hour - log.start.hour,
+                                      minutes=log.stop.minute - log.start.minute,
+                                      seconds=log.stop.second - log.start.second)
+        if task.work_time is not None:
+            task.work_time = task.work_time + duration
+        else:
+            task.work_time = duration
         log.save()
+        task.save()
         serializer = self.get_serializer(log)
         return Response(data=serializer.data)
 

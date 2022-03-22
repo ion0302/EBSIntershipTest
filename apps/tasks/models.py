@@ -8,6 +8,7 @@ class Task(models.Model):
     is_completed = models.BooleanField(default=False)
     created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='created_task_set')
     assigned_to = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='assigned_task_set')
+    work_time = models.DurationField(null=True)
 
 
 class Comment(models.Model):

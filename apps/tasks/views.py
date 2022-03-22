@@ -61,7 +61,7 @@ class TaskViewSet(ModelViewSet):
         task_mail_send(self, user)
         serializer.save(created_by=self.request.user)
 
-    @action(detail=True, methods=['POST'], serializer_class=Serializer)
+    @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.is_completed = True
@@ -90,7 +90,7 @@ class TaskViewSet(ModelViewSet):
 
         return Response(data=serializer.data)
 
-    @action(detail=True, methods=['GET'], serializer_class=Serializer)
+    @action(detail=True, methods=['GET'])
     def comments(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = CommentSerializer(instance.comments, many=True)

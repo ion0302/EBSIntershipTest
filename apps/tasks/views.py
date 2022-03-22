@@ -51,7 +51,7 @@ class TaskViewSet(ModelViewSet):
             return serializers.TaskUpdateSerializer
         if self.action == 'assign_to':
             return serializers.TaskAssignToSerializer
-        if self.action == 'complete' or action == 'start_log' or action == 'stop_log':
+        if self.action == 'complete' or self.action == 'start_log' or self.action == 'stop_log':
             return Serializer
 
         return TaskSerializer
@@ -139,4 +139,3 @@ class CommentViewSet(ModelViewSet):
             email_from = settings.EMAIL_HOST_USER
             recipient_list = [user.email]
             send_mail(subject, message, email_from, recipient_list, fail_silently=False)
-

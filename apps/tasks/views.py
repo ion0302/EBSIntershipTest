@@ -51,15 +51,16 @@ class TaskViewSet(ModelViewSet):
             return serializers.TaskUpdateSerializer
         if self.action == 'assign_to':
             return serializers.TaskAssignToSerializer
-        if self.action == 'complete' or 'start_log' or 'stop_log':
+        if self.action == 'complete' or action == 'start_log' or action == 'stop_log':
             return Serializer
 
         return TaskSerializer
 
     def perform_create(self, serializer):
-        user = User.objects.get(pk=self.request.data['assigned_to'])
-        task_mail_send(self, user)
-        serializer.save(created_by=self.request.user)
+        instance = serializer.save(created_by=self.request.user)
+        user = instance.assigned_to
+        if instance.assigned_to:
+            task_mail_send(self, user)
 
     @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
@@ -68,26 +69,14 @@ class TaskViewSet(ModelViewSet):
         instance.save()
         serializer = self.get_serializer(instance)
 
-        comments = Comment.objects.filter(task=instance.id)
-        user = instance.assigned_to
-        if comments.count() > 0:
-            subject = 'Task Notification'
-            message = f'Hi {user.username}, your task is completed.'
-            email_from = settings.EMAIL_HOST_USER
-            recipient_list = [user.email]
-            send_mail(subject, message, email_from, recipient_list, fail_silently=False)
-
         return Response(data=serializer.data)
 
     @action(detail=True, methods=['POST'], url_path='assign-to')
     def assign_to(self, request, *args, **kwargs):
-        instance = self.get_object()
-        user = User.objects.get(pk=self.request.data['assigned_to'])
-        instance.assigned_to = user
-        instance.save()
-        task_mail_send(self, user)
-        serializer = self.get_serializer(instance)
-
+        serializer = self.get_serializer(data=self.request.data, instance=self.get_object())
+        serializer.is_valid(raise_exception=True)
+        task = serializer.save()
+        task_mail_send(self, task.assigned_to)
         return Response(data=serializer.data)
 
     @action(detail=True, methods=['GET'])
@@ -100,6 +89,10 @@ class TaskViewSet(ModelViewSet):
     def start_log(self, request, *args, **kwargs):
 
         instance = self.get_object()
+        test_log = Log.objects.filter(task=instance).last()
+        if test_log.stop == "":
+            return Response({"Error": "already started a log for this task"}, status=status.HTTP_400_BAD_REQUEST)
+
         log = Log.objects.create(
             start=datetime.datetime.now(),
             task=instance,
@@ -133,8 +126,17 @@ class CommentViewSet(ModelViewSet):
     ordering_fields = ['pk']
 
     def perform_create(self, serializer):
-        task_id = self.request.data['task']
-        task = Task.objects.get(pk=task_id)
+        instance = serializer.save()
+        task = instance.task
         user = task.assigned_to
-        comment_mail_send(self, user)
-        serializer.save()
+        if user:
+            comment_mail_send(self, user)
+
+        if task.is_completed:
+            user = self.request.user
+            subject = 'Task Notification'
+            message = f'Hi {user.username}, you added a comment to completed task.'
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [user.email]
+            send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+

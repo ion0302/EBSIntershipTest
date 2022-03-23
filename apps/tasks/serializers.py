@@ -45,7 +45,7 @@ class TaskListSerializer(ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ['id', 'title']
+        fields = ['id', 'title', 'work_time']
 
 
 class CommentSerializer(ModelSerializer):

@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.core.mail import send_mail
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status

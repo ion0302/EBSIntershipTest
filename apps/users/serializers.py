@@ -18,6 +18,12 @@ class UserListSerializer(serializers.ModelSerializer):
         fields = ['id', "first_name", "last_name"]
 
 
+# class UserLogsSerializer(serializers.ModelSerializer):
+#     work_time = serializers.SerializerMethodField()
+#
+#     def work_time :
+#         cod
+
 # class UsersTasksSerializer(serializers.ModelSerializer):
 #     tasks = TaskSerializer(many=True)
 #

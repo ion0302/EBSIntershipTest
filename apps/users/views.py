@@ -6,6 +6,7 @@ from rest_framework.mixins import ListModelMixin
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet
 
 from apps.logs.models import Log
@@ -41,13 +42,15 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     serializer_class = UserListSerializer
     queryset = User.objects.all()
 
-    # @action(detail=False, methods=['GEt'], url_path='my-logs')
-    # def my_logs(self, request, *args, **kwargs):
-    #     user = self.request.user
-    #     last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
-    #     logs = Log.objects.filter(user=user).filter(stop__gte=last_month)
-    #     log_sum = 0
-    #     for log in logs:
-    #         log_time = log.stop - log.start
-    #         log_sum += log_time.total_seconds()/60
+    @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
+    def last_month_logs(self, request, *args, **kwargs):
+        user = self.request.user
+        last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+        logs = Log.objects.filter(user=user).filter(stop__gte=last_month)
+        log_sum = 0
+        for log in logs:
+            if log.stop and log.start:
+                log_time = log.stop - log.start
+                log_sum += log_time.total_seconds()/60
+        return Response({"Logged time in last month": log_sum})
 

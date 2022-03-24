@@ -24,9 +24,4 @@ class UserListSerializer(serializers.ModelSerializer):
 #     def work_time :
 #         cod
 
-# class UsersTasksSerializer(serializers.ModelSerializer):
-#     tasks = TaskSerializer(many=True)
-#
-#     class Meta:
-#         model = User
-#         fields = ['tasks']
+

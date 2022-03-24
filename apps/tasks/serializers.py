@@ -48,6 +48,15 @@ class TaskListSerializer(ModelSerializer):
         fields = ['id', 'title', 'work_time']
 
 
+# class TaskTop20Serializer(ModelSerializer):
+#
+#     log_time = serializers.SerializerMethodField('')
+#
+#     class Meta:
+#         model = Task
+#         fields = ['id', 'title', 'log_time']
+
+
 class CommentSerializer(ModelSerializer):
     class Meta:
         model = Comment

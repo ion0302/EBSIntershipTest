@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
 from django.contrib.auth.models import User
+from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.response import Response
@@ -47,10 +48,12 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
         user = self.request.user
         last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
         logs = Log.objects.filter(user=user).filter(stop__gte=last_month)
-        log_sum = 0
-        for log in logs:
-            if log.stop and log.start:
+        if logs.count() != 0:
+            log_sum = 0
+            for log in logs:
                 log_time = log.stop - log.start
                 log_sum += log_time.total_seconds()/60
-        return Response({"Logged time in last month": log_sum})
+            return Response({"Logged time": int(log_sum)}, status=status.HTTP_200_OK)
+        else:
+            return Response({"Logged time": 0}, status=status.HTTP_200_OK)
 

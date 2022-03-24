@@ -28,7 +28,10 @@ class LogViewSet(ModelViewSet):
         task = serializer.validated_data['task']
         log = Log.objects.create(user=self.request.user, stop=stop, task=task, start=start)
 
-        task.work_time += duration
+        if task.work_time is not None:
+            task.work_time += duration
+        else:
+            task.work_time = duration
         task.save()
 
         return Response(LogSerializer(log).data)

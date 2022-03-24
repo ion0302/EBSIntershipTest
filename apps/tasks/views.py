@@ -1,3 +1,6 @@
+from datetime import datetime, timezone, timedelta
+from django.db.models import Count
+
 from django.core.mail import send_mail
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
@@ -126,6 +129,14 @@ class TaskViewSet(ModelViewSet):
         task.save()
         serializer = self.get_serializer(log)
         return Response(data=serializer.data)
+
+    # @action(detail=False, methods=['GET'], url_path='top-20')
+    # def top_20_tasks(self, request, *args, **kwargs):
+    #     last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+    #     logs = Log.objects.filter(stop__gte=last_month)
+    #     #result = (Log.objects.values('task').annotate(dcount=Count('task')).order_by())
+    #
+    #     return 0
 
 
 class CommentViewSet(ModelViewSet):

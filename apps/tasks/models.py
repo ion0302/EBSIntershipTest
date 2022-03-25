@@ -9,6 +9,16 @@ class Task(models.Model):
     created_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='created_task_set')
     assigned_to = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='assigned_task_set')
 
+    # def total_time_log(self):
+    #     return self.annotate(total_time=Sum('task_log_set__duration'))
+    #
+    # view:
+    # return self.total_time_log()
+    #
+    # serializer:
+    # total_time =  durationField or
+    # total_time prosta
+
 
 class Comment(models.Model):
     text = models.TextField()

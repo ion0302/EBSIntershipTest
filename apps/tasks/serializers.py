@@ -4,18 +4,11 @@ from django.db.models import Sum
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from apps.logs.models import Log
+
 from apps.tasks.models import Task, Comment
 
 
 class TaskSerializer(ModelSerializer):
-
-    # def create(self, validated_data):
-    #     validated_data['created_by'] = self.context['request'].user
-    #     instance = super(TaskSerializer, self).create(validated_data)
-    #     if instance.assigned_to:
-    #         instance.assigned_to.email_user()
-    #     return instance
 
     class Meta:
         model = Task

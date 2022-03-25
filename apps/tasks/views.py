@@ -64,6 +64,9 @@ class TaskViewSet(ModelViewSet):
         if instance.assigned_to:
             task_mail_send(self, user)
 
+    def list(self, request, *args, **kwargs):
+        pass
+
     @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
         instance = self.get_object()

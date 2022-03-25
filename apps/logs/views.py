@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from apps.logs.models import Log
-from apps.logs.serializers import LogSerializer, LogPostSerializer
+from apps.logs.serializers import LogSerializer
 
 
 class LogViewSet(ModelViewSet):

@@ -47,13 +47,11 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     def last_month_logs(self, request, *args, **kwargs):
         user = self.request.user
         last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
-        logs = Log.objects.filter(user=user).filter(stop__gte=last_month)
+        logs = Log.objects.filter(user=user).filter(start__gte=last_month)
+        log_sum = 0
         if logs.count() != 0:
-            log_sum = 0
+
             for log in logs:
-                log_time = log.stop - log.start
-                log_sum += log_time.total_seconds()/60
+                log_sum += log.duration.total_seconds()/60
             return Response({"Logged time": int(log_sum)}, status=status.HTTP_200_OK)
-        else:
-            return Response({"Logged time": 0}, status=status.HTTP_200_OK)
 

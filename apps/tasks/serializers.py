@@ -1,6 +1,10 @@
+from datetime import datetime, timezone, timedelta
+from django.db.models import Sum
+
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
+from apps.logs.models import Log
 from apps.tasks.models import Task, Comment
 
 
@@ -45,16 +49,22 @@ class TaskListSerializer(ModelSerializer):
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'work_time']
+        fields = ['id', 'title']
 
 
-# class TaskTop20Serializer(ModelSerializer):
-#
-#     log_time = serializers.SerializerMethodField('')
-#
-#     class Meta:
-#         model = Task
-#         fields = ['id', 'title', 'log_time']
+class TaskTop20Serializer(ModelSerializer):
+
+    log_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Task
+        fields = ['id', 'title', 'log_time']
+
+    def get_log_time(self):
+        last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+        t = Task.objects.filter(task_log_set__stop__gte=last_month).annotate(
+            time=Sum('task_log_set__stop' + 'task_log_set__start'))
+
 
 
 class CommentSerializer(ModelSerializer):

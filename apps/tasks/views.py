@@ -17,7 +17,7 @@ from apps.logs.serializers import LogSerializer
 from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet
 from apps.tasks.models import Task, Comment
-from apps.tasks.serializers import TaskSerializer, CommentSerializer
+from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskTop20Serializer
 from config import settings
 
 
@@ -98,8 +98,9 @@ class TaskViewSet(ModelViewSet):
 
         instance = self.get_object()
         test_log = Log.objects.filter(task=instance).last()
-        if test_log.stop is None:
-            return Response({"Error": "already started a log for this task"}, status=status.HTTP_400_BAD_REQUEST)
+        if test_log:
+            if test_log.duration is None and test_log.start is not None:
+                return Response({"Error": "already started a log for this task"}, status=status.HTTP_400_BAD_REQUEST)
 
         log = Log.objects.create(
             start=datetime.datetime.now(),
@@ -107,36 +108,30 @@ class TaskViewSet(ModelViewSet):
             user=request.user
         )
         log.save()
-        serializer = self.get_serializer(log)
+        serializer = LogSerializer(log)
         return Response(data=serializer.data)
 
     @action(detail=True, methods=['POST'], url_path='stop-log')
     def stop_log(self, request, *args, **kwargs):
         instance = self.get_object()
         log = Log.objects.filter(task=instance).last()
-        if log.stop is not None:
-            return Response({"Error": "this log is already stopped"}, status=status.HTTP_400_BAD_REQUEST)
-        log.stop = datetime.datetime.now()
-        task = log.task
-        duration = datetime.timedelta(hours=log.stop.hour - log.start.hour,
-                                      minutes=log.stop.minute - log.start.minute,
-                                      seconds=log.stop.second - log.start.second)
-        if task.work_time is not None:
-            task.work_time = task.work_time + duration
-        else:
-            task.work_time = duration
-        log.save()
-        task.save()
-        serializer = self.get_serializer(log)
-        return Response(data=serializer.data)
+        if log:
+            if log.duration is not None:
+                return Response({"Error": "this log is already stopped"}, status=status.HTTP_400_BAD_REQUEST)
 
-    # @action(detail=False, methods=['GET'], url_path='top-20')
-    # def top_20_tasks(self, request, *args, **kwargs):
-    #     last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
-    #     logs = Log.objects.filter(stop__gte=last_month)
-    #     #result = (Log.objects.values('task').annotate(dcount=Count('task')).order_by())
-    #
-    #     return 0
+            now = datetime.datetime.now()
+            log.duration = datetime.timedelta(hours=now.hour - log.start.hour,
+                                              minutes=now.minute - log.start.minute,
+                                              seconds=now.second - log.start.second)
+            log.save()
+            serializer = LogSerializer(log)
+
+            return Response(data=serializer.data)
+
+    @action(detail=False, methods=['GET'], url_path='top-20')
+    def top_20_tasks(self, request, *args, **kwargs):
+
+        return Response(data=TaskTop20Serializer().data)
 
 
 class CommentViewSet(ModelViewSet):

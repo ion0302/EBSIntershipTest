@@ -17,21 +17,5 @@ class LogViewSet(ModelViewSet):
     #         return LogPostSerializer
     #     return LogSerializer
 
-    @action(detail=False, methods=['POST'], serializer_class=LogPostSerializer, url_path='add-log')
-    def add_log(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=self.request.data)
-        serializer.is_valid(raise_exception=True)
-
-        duration = serializer.validated_data['duration']
-        start = serializer.validated_data['start']
-        stop = duration + start
-        task = serializer.validated_data['task']
-        log = Log.objects.create(user=self.request.user, stop=stop, task=task, start=start)
-
-        if task.work_time is not None:
-            task.work_time += duration
-        else:
-            task.work_time = duration
-        task.save()
-
-        return Response(LogSerializer(log).data)
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

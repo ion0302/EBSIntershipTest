@@ -11,8 +11,6 @@ class LogSerializer(ModelSerializer):
         fields = '__all__'
         extra_kwargs = {
             'user': {'read_only': True},
-            'duration': {'read_only': True},
-
         }
 
 

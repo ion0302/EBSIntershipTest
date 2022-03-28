@@ -50,9 +50,16 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
         logs = Log.objects.filter(user=user).filter(start__gte=last_month)
         log_sum = 0
         if logs.count() != 0:
-
             for log in logs:
                 log_sum += log.duration.total_seconds()/60
 
         return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
+
+    # q = User.objects.annotate(
+    #     time_sum=Sum(
+    #         'user_log_set__duration', filter=Q(
+    #             user_log_set__start__month=last_month))).filter(
+    #     Exists(
+    #         Log.objects.filter(
+    #             user=OuterRef('pk')))).filter(id=1)
 

@@ -40,7 +40,7 @@ def comment_mail_send(self, user):
 
 class TaskViewSet(ModelViewSet):
     serializer_class = TaskSerializer
-    queryset = Task.objects.annotate(total_time=Sum('task_log_set__duration')).order_by('id')
+    queryset = Task.objects.with_total_duration()
     permission_classes = [IsAuthenticated]
     filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
     search_fields = ['title']
@@ -133,7 +133,7 @@ class TaskViewSet(ModelViewSet):
     def top_20_tasks(self, request, *args, **kwargs):
         last_month = timezone.now().month
         queryset = Task.objects.annotate(
-            total_time=Sum(
+            total_duration=Sum(
                 'task_log_set__duration',
                 filter=Q(
                     task_log_set__start__month=last_month

@@ -1,9 +1,16 @@
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, QuerySet
+
+
+class TaskQuerySet(QuerySet):
+    def with_total_duration(self):
+        return self.annotate(total_duration=Sum('task_log_set__duration'))
 
 
 class Task(models.Model):
+    objects = TaskQuerySet.as_manager()
+
     title = models.CharField(max_length=100, db_index=True)
     description = models.TextField()
     is_completed = models.BooleanField(default=False)

@@ -36,11 +36,11 @@ class TaskUpdateSerializer(ModelSerializer):
 
 
 class TaskListSerializer(ModelSerializer):
-    total_time = serializers.DurationField()
+    total_duration = serializers.DurationField()
 
     class Meta:
         model = Task
-        fields = ['id', 'title', 'total_time']
+        fields = ['id', 'title', 'total_duration']
 
 
 class CommentSerializer(ModelSerializer):

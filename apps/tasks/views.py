@@ -1,7 +1,8 @@
-from datetime import datetime, timezone, timedelta
-from django.db.models import Count
+from datetime import datetime
+from django.db.models import Sum, Q, Exists, OuterRef
 
 from django.core.mail import send_mail
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import status
 from rest_framework.decorators import action
@@ -17,7 +18,7 @@ from apps.logs.serializers import LogSerializer
 from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet
 from apps.tasks.models import Task, Comment
-from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskTop20Serializer
+from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer
 from config import settings
 
 
@@ -39,7 +40,7 @@ def comment_mail_send(self, user):
 
 class TaskViewSet(ModelViewSet):
     serializer_class = TaskSerializer
-    queryset = Task.objects.all().order_by('id')
+    queryset = Task.objects.annotate(total_time=Sum('task_log_set__duration')).order_by('id')
     permission_classes = [IsAuthenticated]
     filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
     search_fields = ['title']
@@ -63,9 +64,6 @@ class TaskViewSet(ModelViewSet):
         user = instance.assigned_to
         if instance.assigned_to:
             task_mail_send(self, user)
-
-    def list(self, request, *args, **kwargs):
-        pass
 
     @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
@@ -133,8 +131,23 @@ class TaskViewSet(ModelViewSet):
 
     @action(detail=False, methods=['GET'], url_path='top-20')
     def top_20_tasks(self, request, *args, **kwargs):
+        last_month = timezone.now().month
+        queryset = Task.objects.annotate(
+            total_time=Sum(
+                'task_log_set__duration',
+                filter=Q(
+                    task_log_set__start__month=last_month
+                )
+            )
+        ).filter(
+            Exists(
+                Log.objects.filter(
+                    task=OuterRef('pk')
+                )
+            )
+        ).order_by('-total_time')[:20]
 
-        return Response(data=TaskTop20Serializer().data)
+        return Response(data=TaskListSerializer(queryset, many=True).data)
 
 
 class CommentViewSet(ModelViewSet):

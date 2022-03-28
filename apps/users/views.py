@@ -54,5 +54,5 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
             for log in logs:
                 log_sum += log.duration.total_seconds()/60
 
-        return Response({"Logged time": int(log_sum)}, status=status.HTTP_200_OK)
+        return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
 

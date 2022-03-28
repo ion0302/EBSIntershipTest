@@ -1,23 +1,23 @@
+# @swagger_auto_schema(request_body=TimeLogSerializer)
 from datetime import datetime
 from django.db.models import Sum, Q, Exists, OuterRef
 
 from django.core.mail import send_mail
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import status
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
-import datetime
 
 from apps.tasks import serializers
-from apps.tasks.filtersets import TaskFilterSet
+from apps.tasks.filtersets import TaskFilterSet, TimeLogFilterSet
 from apps.tasks.models import Task, Comment, Timer, TimeLog
 from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer, TimeLogSerializer, \
-    TimerSerializer
+    TimerSerializer, TaskAssignToSerializer
 from config import settings
 
 
@@ -47,13 +47,16 @@ class TaskViewSet(ModelViewSet):
     filterset_class = TaskFilterSet
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action in ['list']:
             return serializers.TaskListSerializer
-        if self.action == 'update' or self.action == 'partial_update':
+
+        if self.action in ['update', 'partial_update']:
             return serializers.TaskUpdateSerializer
+
         if self.action == 'assign_to':
             return serializers.TaskAssignToSerializer
-        if self.action == 'complete' or self.action == 'timer_start' or self.action == 'timer_stop':
+
+        if self.action in ['complete', 'timer_start', 'timer_stop']:
             return Serializer
 
         return TaskSerializer
@@ -108,26 +111,26 @@ class TaskViewSet(ModelViewSet):
         serializer = TimerSerializer(instance)
 
         return Response(data=serializer.data)
-    #
-    # @action(detail=False, methods=['GET'], url_path='top-20')
-    # def top_20_tasks(self, request, *args, **kwargs):
-    #     last_month = timezone.now().month
-    #     queryset = Task.objects.annotate(
-    #         total_duration=Sum(
-    #             'task_log_set__duration',
-    #             filter=Q(
-    #                 task_log_set__start__month=last_month
-    #             )
-    #         )
-    #     ).filter(
-    #         Exists(
-    #             Log.objects.filter(
-    #                 task=OuterRef('pk')
-    #             )
-    #         )
-    #     ).order_by('-total_time')[:20]
-    #
-    #     return Response(data=TaskListSerializer(queryset, many=True).data)
+
+    @action(detail=False, methods=['GET'], url_path='top-20')
+    def top_20_tasks(self, request, *args, **kwargs):
+        last_month = timezone.now().month
+        queryset = Task.objects.annotate(
+            total_duration=Sum(
+                'task_timelog_set__duration',
+                filter=Q(
+                    task_timelog_set__started_at__month=last_month
+                )
+            )
+        ).filter(
+            Exists(
+                TimeLog.objects.filter(
+                    task=OuterRef('pk')
+                )
+            )
+        ).order_by('-total_duration')[:20]
+
+        return Response(data=TaskListSerializer(queryset, many=True).data)
 
 
 class CommentViewSet(ModelViewSet):
@@ -152,3 +155,15 @@ class CommentViewSet(ModelViewSet):
             email_from = settings.EMAIL_HOST_USER
             recipient_list = [user.email]
             send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+
+
+class TimeLogViewSet(ModelViewSet):
+    serializer_class = TimeLogSerializer
+    queryset = TimeLog.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
+    ordering_fields = ['pk']
+    filterset_class = TimeLogFilterSet
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

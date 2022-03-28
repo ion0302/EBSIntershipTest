@@ -63,7 +63,6 @@ class TimeLogSerializer(ModelSerializer):
         fields = '__all__'
         extra_kwargs = {
             'user': {'read_only': True},
-            'is_completed': {'read_only': True},
         }
 
 

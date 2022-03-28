@@ -33,6 +33,8 @@ class TimeLog(models.Model):
     duration = models.DurationField(default=timedelta)
 
 
+
+
 class Timer(models.Model):
     class Meta:
         unique_together = [

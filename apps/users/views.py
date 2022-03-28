@@ -1,6 +1,7 @@
 from datetime import datetime, timezone, timedelta
 
 from django.contrib.auth.models import User
+from django.db.models import Sum, Exists, Q, OuterRef
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
@@ -43,17 +44,18 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     serializer_class = UserListSerializer
     queryset = User.objects.all()
 
-    # @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
-    # def last_month_logs(self, request, *args, **kwargs):
-    #     user = self.request.user
-    #     last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
-    #     logs = TimeLog.objects.filter(user=user).filter(start__gte=last_month)
-    #     log_sum = 0
-    #     if logs.count() != 0:
-    #         for log in logs:
-    #             log_sum += log.duration.total_seconds()/60
-    #
-    #     return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
+    @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
+    def last_month_logs(self, request, *args, **kwargs):
+        user = self.request.user
+        last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+
+        logs = TimeLog.objects.filter(user=user).filter(started_at__gte=last_month)
+        log_sum = 0
+        if logs.count() != 0:
+            for log in logs:
+                log_sum += log.duration.total_seconds()/60
+
+        return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
 
     # q = User.objects.annotate(
     #     time_sum=Sum(

@@ -13,12 +13,11 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 import datetime
 
-from apps.logs.models import Log
-from apps.logs.serializers import LogSerializer
 from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet
-from apps.tasks.models import Task, Comment
-from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer
+from apps.tasks.models import Task, Comment, Timer, TimeLog
+from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer, TimeLogSerializer, \
+    TimerSerializer
 from config import settings
 
 
@@ -54,7 +53,7 @@ class TaskViewSet(ModelViewSet):
             return serializers.TaskUpdateSerializer
         if self.action == 'assign_to':
             return serializers.TaskAssignToSerializer
-        if self.action == 'complete' or self.action == 'start_log' or self.action == 'stop_log':
+        if self.action == 'complete' or self.action == 'timer_start' or self.action == 'timer_stop':
             return Serializer
 
         return TaskSerializer
@@ -91,63 +90,44 @@ class TaskViewSet(ModelViewSet):
     @action(detail=True, methods=['GET'])
     def logs(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = LogSerializer(instance.task_log_set, many=True)
+        serializer = TimeLogSerializer(instance.task_timelog_set, many=True)
         return Response(data=serializer.data)
 
-    @action(detail=True, methods=['POST'], url_path='start-log')
-    def start_log(self, request, *args, **kwargs):
+    @action(detail=True, methods=['POST'])
+    def timer_start(self, request, *args, **kwargs):
+        instance, created = Timer.objects.get_or_create(user=self.request.user, task=self.get_object())
+        instance.start()
+        serializer = TimerSerializer(instance)
 
-        instance = self.get_object()
-        test_log = Log.objects.filter(task=instance).last()
-        if test_log:
-            if test_log.duration is None and test_log.start is not None:
-                return Response({"Error": "already started a log for this task"}, status=status.HTTP_400_BAD_REQUEST)
-
-        log = Log.objects.create(
-            start=datetime.datetime.now(),
-            task=instance,
-            user=request.user
-        )
-        log.save()
-        serializer = LogSerializer(log)
         return Response(data=serializer.data)
 
-    @action(detail=True, methods=['POST'], url_path='stop-log')
-    def stop_log(self, request, *args, **kwargs):
-        instance = self.get_object()
-        log = Log.objects.filter(task=instance).last()
-        if log:
-            if log.duration is not None:
-                return Response({"Error": "this log is already stopped"}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=True, methods=['POST'])
+    def timer_stop(self, request, *args, **kwargs):
+        instance = Timer.objects.get(task=self.get_object(), user=self.request.user)
+        instance.stop()
+        serializer = TimerSerializer(instance)
 
-            now = datetime.datetime.now()
-            log.duration = datetime.timedelta(hours=now.hour - log.start.hour,
-                                              minutes=now.minute - log.start.minute,
-                                              seconds=now.second - log.start.second)
-            log.save()
-            serializer = LogSerializer(log)
-
-            return Response(data=serializer.data)
-
-    @action(detail=False, methods=['GET'], url_path='top-20')
-    def top_20_tasks(self, request, *args, **kwargs):
-        last_month = timezone.now().month
-        queryset = Task.objects.annotate(
-            total_duration=Sum(
-                'task_log_set__duration',
-                filter=Q(
-                    task_log_set__start__month=last_month
-                )
-            )
-        ).filter(
-            Exists(
-                Log.objects.filter(
-                    task=OuterRef('pk')
-                )
-            )
-        ).order_by('-total_time')[:20]
-
-        return Response(data=TaskListSerializer(queryset, many=True).data)
+        return Response(data=serializer.data)
+    #
+    # @action(detail=False, methods=['GET'], url_path='top-20')
+    # def top_20_tasks(self, request, *args, **kwargs):
+    #     last_month = timezone.now().month
+    #     queryset = Task.objects.annotate(
+    #         total_duration=Sum(
+    #             'task_log_set__duration',
+    #             filter=Q(
+    #                 task_log_set__start__month=last_month
+    #             )
+    #         )
+    #     ).filter(
+    #         Exists(
+    #             Log.objects.filter(
+    #                 task=OuterRef('pk')
+    #             )
+    #         )
+    #     ).order_by('-total_time')[:20]
+    #
+    #     return Response(data=TaskListSerializer(queryset, many=True).data)
 
 
 class CommentViewSet(ModelViewSet):

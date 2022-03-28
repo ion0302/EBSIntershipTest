@@ -10,7 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet
 
-from apps.logs.models import Log
+from apps.tasks.models import TimeLog
 from apps.users.serializers import UserSerializer, UserListSerializer
 
 
@@ -43,17 +43,17 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     serializer_class = UserListSerializer
     queryset = User.objects.all()
 
-    @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
-    def last_month_logs(self, request, *args, **kwargs):
-        user = self.request.user
-        last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
-        logs = Log.objects.filter(user=user).filter(start__gte=last_month)
-        log_sum = 0
-        if logs.count() != 0:
-            for log in logs:
-                log_sum += log.duration.total_seconds()/60
-
-        return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
+    # @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
+    # def last_month_logs(self, request, *args, **kwargs):
+    #     user = self.request.user
+    #     last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+    #     logs = TimeLog.objects.filter(user=user).filter(start__gte=last_month)
+    #     log_sum = 0
+    #     if logs.count() != 0:
+    #         for log in logs:
+    #             log_sum += log.duration.total_seconds()/60
+    #
+    #     return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
 
     # q = User.objects.annotate(
     #     time_sum=Sum(

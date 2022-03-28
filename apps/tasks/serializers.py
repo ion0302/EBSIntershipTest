@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 
-from apps.tasks.models import Task, Comment
+from apps.tasks.models import Task, Comment, Timer, TimeLog
 
 
 class TaskSerializer(ModelSerializer):
@@ -13,7 +13,6 @@ class TaskSerializer(ModelSerializer):
         extra_kwargs = {
             'created_by': {'read_only': True},
             'is_completed': {'read_only': True},
-            'work_time:': {'read_only': True},
         }
 
 
@@ -31,7 +30,6 @@ class TaskUpdateSerializer(ModelSerializer):
             'created_by': {'read_only': True},
             'is_completed': {'read_only': True},
             'assigned_to': {'read_only': True},
-            'work_time:': {'read_only': True},
         }
 
 
@@ -47,5 +45,25 @@ class CommentSerializer(ModelSerializer):
     class Meta:
         model = Comment
         fields = '__all__'
+
+
+class TimerSerializer(ModelSerializer):
+    class Meta:
+        model = Timer
+        fields = '__all__'
+        extra_kwargs = {
+            'user': {'read_only': True},
+            'is_started': {'read_only': True},
+        }
+
+
+class TimeLogSerializer(ModelSerializer):
+    class Meta:
+        model = TimeLog
+        fields = '__all__'
+        extra_kwargs = {
+            'user': {'read_only': True},
+            'is_completed': {'read_only': True},
+        }
 
 

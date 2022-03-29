@@ -1,10 +1,17 @@
+from datetime import datetime, timezone, timedelta
+
 from django.contrib.auth.models import User
+from django.db.models import Sum, Exists, Q, OuterRef
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.serializers import Serializer
 from rest_framework.viewsets import GenericViewSet
 
+from apps.tasks.models import TimeLog
 from apps.users.serializers import UserSerializer, UserListSerializer
 
 
@@ -36,3 +43,25 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = UserListSerializer
     queryset = User.objects.all()
+
+    @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
+    def last_month_logs(self, request, *args, **kwargs):
+        user = self.request.user
+        last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+
+        logs = TimeLog.objects.filter(user=user).filter(started_at__gte=last_month)
+        log_sum = 0
+        if logs.count() != 0:
+            for log in logs:
+                log_sum += log.duration.total_seconds()/60
+
+        return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
+
+    # q = User.objects.annotate(
+    #     time_sum=Sum(
+    #         'user_log_set__duration', filter=Q(
+    #             user_log_set__start__month=last_month))).filter(
+    #     Exists(
+    #         Log.objects.filter(
+    #             user=OuterRef('pk')))).filter(id=1)
+

@@ -1,6 +1,10 @@
-from django.contrib.auth.models import User
+# @swagger_auto_schema(request_body=TimeLogSerializer)
+from django.db.models import Sum, Q, Exists, OuterRef
+
 from django.core.mail import send_mail
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_yasg.utils import swagger_auto_schema
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
@@ -9,9 +13,10 @@ from rest_framework.viewsets import ModelViewSet
 from rest_framework.permissions import IsAuthenticated
 
 from apps.tasks import serializers
-from apps.tasks.filtersets import TaskFilterSet
-from apps.tasks.models import Task, Comment
-from apps.tasks.serializers import TaskSerializer, CommentSerializer
+from apps.tasks.filtersets import TaskFilterSet, TimeLogFilterSet
+from apps.tasks.models import Task, Comment, Timer, TimeLog
+from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer, TimeLogSerializer, \
+    TimerSerializer, TaskAssignToSerializer, TaskUpdateSerializer
 from config import settings
 
 
@@ -23,17 +28,9 @@ def task_mail_send(self, user):
     send_mail(subject, message, email_from, recipient_list, fail_silently=False)
 
 
-def comment_mail_send(self, user):
-    subject = 'Task Notification'
-    message = f'Hi {user.username}, a new comment is attached to your task.'
-    email_from = settings.EMAIL_HOST_USER
-    recipient_list = [user.email]
-    send_mail(subject, message, email_from, recipient_list, fail_silently=False)
-
-
 class TaskViewSet(ModelViewSet):
     serializer_class = TaskSerializer
-    queryset = Task.objects.all().order_by('id')
+    queryset = Task.objects.with_total_duration()
     permission_classes = [IsAuthenticated]
     filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
     search_fields = ['title']
@@ -41,56 +38,87 @@ class TaskViewSet(ModelViewSet):
     filterset_class = TaskFilterSet
 
     def get_serializer_class(self):
-        if self.action == 'list':
+        if self.action in ['list']:
             return serializers.TaskListSerializer
-        if self.action == 'update' or self.action == 'partial_update':
-            return serializers.TaskUpdateSerializer
+
+        if self.action in ['update', 'partial_update']:
+            return TaskUpdateSerializer
+
         if self.action == 'assign_to':
-            return serializers.TaskAssignToSerializer
-        if self.action == 'complete':
+            return TaskAssignToSerializer
+
+        if self.action in ['complete', 'timer_start', 'timer_stop']:
             return Serializer
 
         return TaskSerializer
 
     def perform_create(self, serializer):
-        user = User.objects.get(pk=self.request.data['assigned_to'])
-        task_mail_send(self, user)
-        serializer.save(created_by=self.request.user)
+        instance = serializer.save(created_by=self.request.user)
 
-    @action(detail=True, methods=['POST'], serializer_class=Serializer)
+    @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
         instance = self.get_object()
         instance.is_completed = True
         instance.save()
         serializer = self.get_serializer(instance)
 
-        comments = Comment.objects.filter(task=instance.id)
-        user = instance.assigned_to
-        if comments.count() > 0:
-            subject = 'Task Notification'
-            message = f'Hi {user.username}, your task is completed.'
-            email_from = settings.EMAIL_HOST_USER
-            recipient_list = [user.email]
-            send_mail(subject, message, email_from, recipient_list, fail_silently=False)
-
         return Response(data=serializer.data)
 
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], url_path='assign-to')
     def assign_to(self, request, *args, **kwargs):
-        instance = self.get_object()
-        user = User.objects.get(pk=self.request.data['assigned_to'])
-        instance.assigned_to = user
-        instance.save()
-        task_mail_send(self, user)
-        serializer = self.get_serializer(instance)
-
+        serializer = self.get_serializer(data=self.request.data, instance=self.get_object())
+        serializer.is_valid(raise_exception=True)
+        task = serializer.save()
+        task_mail_send(self, task.assigned_to)
         return Response(data=serializer.data)
 
-    @action(detail=True, methods=['GET'], serializer_class=Serializer)
+    @action(detail=True, methods=['GET'])
     def comments(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = CommentSerializer(instance.comments, many=True)
         return Response(data=serializer.data)
+
+    @action(detail=True, methods=['GET'])
+    def logs(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = TimeLogSerializer(instance.task_timelog_set, many=True)
+        return Response(data=serializer.data)
+
+    @action(detail=True, methods=['POST'])
+    def timer_start(self, request, *args, **kwargs):
+        instance, created = Timer.objects.get_or_create(user=self.request.user, task=self.get_object())
+        instance.start()
+        serializer = TimerSerializer(instance)
+
+        return Response(data=serializer.data)
+
+    @action(detail=True, methods=['POST'])
+    def timer_stop(self, request, *args, **kwargs):
+        instance = Timer.objects.get(task=self.get_object(), user=self.request.user)
+        instance.stop()
+        serializer = TimerSerializer(instance)
+
+        return Response(data=serializer.data)
+
+    @action(detail=False, methods=['GET'], url_path='top-20')
+    def top_20_tasks(self, request, *args, **kwargs):
+        last_month = timezone.now().month
+        queryset = Task.objects.annotate(
+            total_duration=Sum(
+                'task_timelog_set__duration',
+                filter=Q(
+                    task_timelog_set__started_at__month=last_month
+                )
+            )
+        ).filter(
+            Exists(
+                TimeLog.objects.filter(
+                    task=OuterRef('pk')
+                )
+            )
+        ).order_by('-total_duration')[:20]
+
+        return Response(data=TaskListSerializer(queryset, many=True).data)
 
 
 class CommentViewSet(ModelViewSet):
@@ -102,9 +130,25 @@ class CommentViewSet(ModelViewSet):
     ordering_fields = ['pk']
 
     def perform_create(self, serializer):
-        task_id = self.request.data['task']
-        task = Task.objects.get(pk=task_id)
-        user = task.assigned_to
-        comment_mail_send(self, user)
-        serializer.save()
+        instance = serializer.save()
+        task = instance.task
 
+        if task.is_completed:
+            user = self.request.user
+            subject = 'Task Notification'
+            message = f'Hi {user.username}, you added a comment to completed task.'
+            email_from = settings.EMAIL_HOST_USER
+            recipient_list = [user.email]
+            send_mail(subject, message, email_from, recipient_list, fail_silently=False)
+
+
+class TimeLogViewSet(ModelViewSet):
+    serializer_class = TimeLogSerializer
+    queryset = TimeLog.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
+    ordering_fields = ['pk']
+    filterset_class = TimeLogFilterSet
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

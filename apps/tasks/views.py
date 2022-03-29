@@ -1,5 +1,4 @@
 # @swagger_auto_schema(request_body=TimeLogSerializer)
-from datetime import datetime
 from django.db.models import Sum, Q, Exists, OuterRef
 
 from django.core.mail import send_mail
@@ -17,21 +16,13 @@ from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet, TimeLogFilterSet
 from apps.tasks.models import Task, Comment, Timer, TimeLog
 from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer, TimeLogSerializer, \
-    TimerSerializer, TaskAssignToSerializer
+    TimerSerializer, TaskAssignToSerializer, TaskUpdateSerializer
 from config import settings
 
 
 def task_mail_send(self, user):
     subject = 'Task Notification'
     message = f'Hi {user.username}, a new task is attached to you.'
-    email_from = settings.EMAIL_HOST_USER
-    recipient_list = [user.email]
-    send_mail(subject, message, email_from, recipient_list, fail_silently=False)
-
-
-def comment_mail_send(self, user):
-    subject = 'Task Notification'
-    message = f'Hi {user.username}, a new comment is attached to your task.'
     email_from = settings.EMAIL_HOST_USER
     recipient_list = [user.email]
     send_mail(subject, message, email_from, recipient_list, fail_silently=False)
@@ -51,10 +42,10 @@ class TaskViewSet(ModelViewSet):
             return serializers.TaskListSerializer
 
         if self.action in ['update', 'partial_update']:
-            return serializers.TaskUpdateSerializer
+            return TaskUpdateSerializer
 
         if self.action == 'assign_to':
-            return serializers.TaskAssignToSerializer
+            return TaskAssignToSerializer
 
         if self.action in ['complete', 'timer_start', 'timer_stop']:
             return Serializer
@@ -63,9 +54,6 @@ class TaskViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
-        user = instance.assigned_to
-        if instance.assigned_to:
-            task_mail_send(self, user)
 
     @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
@@ -144,9 +132,6 @@ class CommentViewSet(ModelViewSet):
     def perform_create(self, serializer):
         instance = serializer.save()
         task = instance.task
-        user = task.assigned_to
-        if user:
-            comment_mail_send(self, user)
 
         if task.is_completed:
             user = self.request.user

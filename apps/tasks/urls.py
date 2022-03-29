@@ -5,6 +5,6 @@ from apps.tasks.views import TaskViewSet, CommentViewSet, TimeLogViewSet
 router = DefaultRouter()
 router.register('tasks', TaskViewSet, basename="task")
 router.register('comments', CommentViewSet, basename="comments")
-router.register('time_logs', TimeLogViewSet, basename="time_logs")
+router.register('timelogs', TimeLogViewSet, basename="timelogs")
 
 urlpatterns = router.urls

@@ -1,7 +1,7 @@
-from datetime import datetime, timezone, timedelta
 
+from django.utils import timezone
 from django.contrib.auth.models import User
-from django.db.models import Sum, Exists, Q, OuterRef
+from django.db.models import Sum
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.mixins import ListModelMixin
@@ -24,16 +24,10 @@ class RegisterUserView(GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
-        user = User.objects.create(
-            first_name=serializer.validated_data['first_name'],
-            last_name=serializer.validated_data['last_name'],
-            email=serializer.validated_data['email'],
-            username=serializer.validated_data['email'],
-            is_superuser=False,
-            is_staff=False
-        )
-        user.set_password(serializer.validated_data['password'])
+        serializer.validated_data['username'] = serializer.validated_data['email']
+        password = serializer.validated_data.pop('password')
+        user = serializer.save()
+        user.set_password(password)
         user.save()
 
         return Response(data=UserSerializer(user).data)
@@ -47,21 +41,9 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
     def last_month_logs(self, request, *args, **kwargs):
         user = self.request.user
-        last_month = datetime.now(tz=timezone.utc) - timedelta(days=30)
+        last_month = timezone.now().month
 
-        logs = TimeLog.objects.filter(user=user).filter(started_at__gte=last_month)
-        log_sum = 0
-        if logs.count() != 0:
-            for log in logs:
-                log_sum += log.duration.total_seconds()/60
+        logs = TimeLog.objects.filter(user=user, started_at__month=last_month).aggregate(Sum('duration'))
+        minutes = logs['duration__sum'].total_seconds()/60
 
-        return Response({"work time": int(log_sum)}, status=status.HTTP_200_OK)
-
-    # q = User.objects.annotate(
-    #     time_sum=Sum(
-    #         'user_log_set__duration', filter=Q(
-    #             user_log_set__start__month=last_month))).filter(
-    #     Exists(
-    #         Log.objects.filter(
-    #             user=OuterRef('pk')))).filter(id=1)
-
+        return Response({"work time": int(minutes)}, status=status.HTTP_200_OK)

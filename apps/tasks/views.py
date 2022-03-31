@@ -16,7 +16,7 @@ from apps.tasks import serializers
 from apps.tasks.filtersets import TaskFilterSet, TimeLogFilterSet
 from apps.tasks.models import Task, Comment, Timer, TimeLog
 from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer, TimeLogSerializer, \
-    TimerSerializer, TaskAssignToSerializer, TaskUpdateSerializer
+    TimerSerializer, TaskAssignToSerializer, TaskUpdateSerializer, TimeLogListSerializer
 from config import settings
 
 
@@ -40,6 +40,9 @@ class TaskViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['list']:
             return serializers.TaskListSerializer
+
+        if self.action in ['retrieve']:
+            return serializers.TaskDetailSerializer
 
         if self.action in ['update', 'partial_update']:
             return TaskUpdateSerializer
@@ -149,6 +152,11 @@ class TimeLogViewSet(ModelViewSet):
     filter_backends = [SearchFilter, OrderingFilter, DjangoFilterBackend]
     ordering_fields = ['pk']
     filterset_class = TimeLogFilterSet
+
+    def get_serializer_class(self):
+        if self.action in ['list']:
+            return TimeLogListSerializer
+        return TimeLogSerializer
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

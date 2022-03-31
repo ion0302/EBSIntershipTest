@@ -44,6 +44,10 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
         last_month = timezone.now().month
 
         logs = TimeLog.objects.filter(user=user, started_at__month=last_month).aggregate(Sum('duration'))
-        minutes = logs['duration__sum'].total_seconds()/60
+        minutes = None
+        if logs['duration__sum']:
+            minutes = logs['duration__sum'].total_seconds()/60
 
-        return Response({"work time": int(minutes)}, status=status.HTTP_200_OK)
+            return Response({"work time": int(minutes)}, status=status.HTTP_200_OK)
+        else:
+            return Response({"work time": None}, status=status.HTTP_200_OK)

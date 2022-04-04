@@ -31,6 +31,7 @@ class UsersTests(TestCase):
         }
         response = self.client.post(url, data, 'json')
         self.assertEqual(200, response.status_code)
+        self.assertEqual(2, User.objects.count())
 
     def test_users_last_month_logs(self):
         url = '/api/users/list/last-month-logs/'

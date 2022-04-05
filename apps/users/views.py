@@ -42,9 +42,10 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     def last_month_logs(self, request, *args, **kwargs):
         user = self.request.user
         last_month = timezone.now().month
+        last_year = timezone.now().year
 
-        logs = TimeLog.objects.filter(user=user, started_at__month=last_month).aggregate(Sum('duration'))
-        minutes = None
+        logs = TimeLog.objects.filter(user=user, started_at__month=last_month,
+                                      started_at__year=last_year).aggregate(Sum('duration'))
         if logs['duration__sum']:
             minutes = logs['duration__sum'].total_seconds()/60
 

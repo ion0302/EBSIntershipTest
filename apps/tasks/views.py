@@ -1,4 +1,6 @@
 # @swagger_auto_schema(request_body=TimeLogSerializer)
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 from django.db.models import Sum, Q, Exists, OuterRef
 
 from django.core.mail import send_mail
@@ -18,6 +20,7 @@ from apps.tasks.models import Task, Comment, Timer, TimeLog
 from apps.tasks.serializers import TaskSerializer, CommentSerializer, TaskListSerializer, TimeLogSerializer, \
     TimerSerializer, TaskAssignToSerializer, TaskUpdateSerializer, TimeLogListSerializer
 from config import settings
+from config.settings import CACHE_TTL
 
 
 def task_mail_send(self, user):
@@ -103,14 +106,18 @@ class TaskViewSet(ModelViewSet):
 
         return Response(data=serializer.data)
 
+    @method_decorator(cache_page(CACHE_TTL))
     @action(detail=False, methods=['GET'], url_path='top-20')
     def top_20_tasks(self, request, *args, **kwargs):
         last_month = timezone.now().month
+        last_year = timezone.now().year
         queryset = Task.objects.annotate(
             total_duration=Sum(
                 'task_timelog_set__duration',
                 filter=Q(
-                    task_timelog_set__started_at__month=last_month
+                    task_timelog_set__started_at__month=last_month,
+                    task_timelog_set__started_at__year=last_year
+
                 )
             )
         ).filter(
@@ -119,7 +126,7 @@ class TaskViewSet(ModelViewSet):
                     task=OuterRef('pk')
                 )
             )
-        ).order_by('-total_duration')[:20]
+        ).filter(total_duration__isnull=False).order_by('-total_duration')[:20]
 
         return Response(data=TaskListSerializer(queryset, many=True).data)
 

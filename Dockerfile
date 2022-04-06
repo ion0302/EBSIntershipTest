@@ -1,21 +1,48 @@
-## base image
-#FROM python
-#
-##maintainer
-#LABEL Author="CodeGenes"
-#
-## The enviroment variable ensures that the python output is set straight
-## to the terminal with out buffering it first
-#ENV PYTHONBUFFERED 1
-#
-##directory to store app source code
-#RUN mkdir /zuri
-#
-##switch to /app directory so that everything runs from here
-#WORKDIR /zuri
-#
-##copy the app code to image working directory
-#COPY ./zuri /zuri
-#
-##let pip install required packages
-#RUN pip install -r requirements.txt
+FROM python:3.9
+
+# Install missing libs
+RUN apt-get  update \
+    && apt-get install -y  curl libpq-dev gcc python3-cffi git && \
+apt-get clean autoclean && \
+apt-get autoremove --purge -y && \
+rm -rf /var/lib/apt/lists/* && \
+rm -f /var/cache/apt/archives/*.deb
+
+# Creating Application Source Code Directory
+RUN mkdir -p /usr/app
+
+# Setting Home Directory for containers
+WORKDIR /usr/app
+
+# Installing python dependencies
+COPY requirements.txt /usr/app
+RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install gunicorn
+
+# Cleanup
+RUN rm -rf /var/lib/apt/lists/*
+RUN rm -rf /root/.cache/*
+RUN rm -rf /tmp/*
+RUN apt-get -y autoremove --purge && apt-get -y autoclean && apt-get -y clean
+RUN rm -rf /usr/share/man/*
+RUN rm -rf /usr/share/doc/*
+RUN find /var/lib/apt -type f | xargs rm -f
+RUN find /var/cache -type f -exec rm -rf {} \;
+RUN /usr/local/bin/python -m pip install --upgrade pip
+# Copying src code to Container
+COPY . /usr/app
+RUN pip install --user -r requirements.txt
+
+# Exposing Ports
+EXPOSE 8000
+
+# Environemnt variables
+ENV DJANGO_ENV  development
+ENV GUNICORN_BIND  0.0.0.0:8000
+ENV GUNICORN_WORKERS 4
+ENV GUNICORN_WORKERS_CONNECTIONS 1001
+
+# Running Python Application
+CMD  /bin/bash startup.sh
+#CMD gunicorn --workers=${GUNICORN_WORKERS} config.wsgi:application -b ${GUNICORN_BIND} --log-level info
+

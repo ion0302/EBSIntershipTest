@@ -17,10 +17,11 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         total = kwargs['total']
         users_id = list(User.objects.values_list('id', flat=True))
-        for i in range(total):
-            Task.objects.create(title=get_random_string(length=15),
-                                description=get_random_string(length=200),
-                                created_by_id=random.choice(users_id),
-                                assigned_to_id=random.choice(users_id),
-                                is_completed=random.choice([True, False]))
-        self.stdout.write(self.style.SUCCESS('Successfully added tasks'))
+        if users_id:
+            for i in range(total):
+                Task.objects.create(title=get_random_string(length=15),
+                                    description=get_random_string(length=200),
+                                    created_by_id=random.choice(users_id),
+                                    assigned_to_id=random.choice(users_id),
+                                    is_completed=random.choice([True, False]))
+            self.stdout.write(self.style.SUCCESS('Successfully added tasks'))

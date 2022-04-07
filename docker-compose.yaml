@@ -24,3 +24,13 @@ services:
     ports:
       - "6379:6379"
     image: "redis:alpine"
+  pghero:
+    image: ankane/pghero
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    environment:
+      DATABASE_URL: postgres://postgres1:postgres1@db:5432/postgres1
+    depends_on:
+      - db

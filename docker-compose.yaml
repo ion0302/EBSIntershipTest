@@ -14,16 +14,23 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - redis
     volumes:
       - .:/code
     environment:
       - POSTGRES_NAME=postgres1
       - POSTGRES_USER=postgres1
       - POSTGRES_PASSWORD=postgres1
+    links:
+      - db:db
+      - redis:redis
   redis:
     ports:
       - "6379:6379"
     image: "redis:alpine"
+    expose:
+      - "6379"
+
   pghero:
     image: ankane/pghero
     ports:

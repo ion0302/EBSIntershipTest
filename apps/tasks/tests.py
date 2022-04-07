@@ -15,6 +15,7 @@ from apps.tasks.serializers import TaskSerializer, CommentSerializer, TimeLogSer
 def create_user():
     return User.objects.create(username='string2@mail.com', email='string2@mail.com', password='string2')
 
+
 class TaskTests(TestCase):
 
     def setUp(self) -> None:
@@ -43,17 +44,16 @@ class TaskTests(TestCase):
         response = self.client.get(reverse('tasks-detail', args=[instance.id]))
         self.assertEqual(200, response.status_code)
 
-    def test_create_tasks(self):
+    def test_create_new_task(self):
+        user = create_user()
         data = {
             "title": "string",
             "description": "string",
-            "assigned_to": 1
-
+            "assigned_to": user.id
         }
-
         response = self.client.post('/api/tasks/', data, 'json')
+
         self.assertEqual(201, response.status_code)
-        self.assertEqual(1, Task.objects.count())
 
     def test_top_20_tasks(self):
         response = self.client.get('/api/tasks/top-20/')
@@ -154,24 +154,6 @@ class TaskTests(TestCase):
         self.assertEqual(200, response.status_code)
         self.assertEqual(1, TimeLog.objects.count())
 
-
-class CommentsTests(TestCase):
-
-    def setUp(self) -> None:
-        self.client = APIClient()
-        self.user = User.objects.create(username='string@mail.com', email='string@mail.com', password='string')
-        refresh = RefreshToken.for_user(self.user)
-        self.client.force_authenticate(user=self.user, token=f'Bearer {refresh.access_token}')
-
-    def tearDown(self) -> None:
-        super().tearDown()
-
-    def create_task(self):
-        return Task.objects.create(title='Task', description='task', assigned_to=self.user, created_by=self.user)
-
-    def create_comment(self, task):
-        return Comment.objects.create(text='Text', task=task)
-
     def test_get_comments(self):
         task = self.create_task()
         instance = self.create_comment(task)
@@ -218,24 +200,6 @@ class CommentsTests(TestCase):
         response = self.client.delete(url)
 
         self.assertEqual(204, response.status_code)
-
-
-class TimeLogsTests(TestCase):
-    def setUp(self) -> None:
-        self.client = APIClient()
-        self.user = User.objects.create(username='string@mail.com', email='string@mail.com', password='string')
-        refresh = RefreshToken.for_user(self.user)
-        self.client.force_authenticate(user=self.user, token=f'Bearer {refresh.access_token}')
-
-    def tearDown(self) -> None:
-        super().tearDown()
-
-    def create_task(self):
-        return Task.objects.create(title='Task', description='task', assigned_to=self.user, created_by=self.user)
-
-    def create_timelog(self, task):
-        return TimeLog.objects.create(started_at="2022-03-31T14:13:14.576Z", duration="00:00:17.7", user=self.user,
-                                      task=task)
 
     def test_get_timelogs(self):
         task = self.create_task()

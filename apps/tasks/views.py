@@ -1,4 +1,6 @@
 # @swagger_auto_schema(request_body=TimeLogSerializer)
+from datetime import datetime
+
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.db.models import Sum, Q, Exists, OuterRef
@@ -41,10 +43,10 @@ class TaskViewSet(ModelViewSet):
     filterset_class = TaskFilterSet
 
     def get_serializer_class(self):
-        if self.action in ['list']:
+        if self.action == 'list':
             return serializers.TaskListSerializer
 
-        if self.action in ['retrieve']:
+        if self.action == 'retrieve':
             return serializers.TaskDetailSerializer
 
         if self.action in ['update', 'partial_update']:
@@ -59,7 +61,7 @@ class TaskViewSet(ModelViewSet):
         return TaskSerializer
 
     def perform_create(self, serializer):
-        instance = serializer.save(created_by=self.request.user)
+        serializer.save(created_by=self.request.user)
 
     @action(detail=True, methods=['POST'])
     def complete(self, request, *args, **kwargs):
@@ -109,21 +111,11 @@ class TaskViewSet(ModelViewSet):
     @method_decorator(cache_page(CACHE_TTL))
     @action(detail=False, methods=['GET'], url_path='top-20')
     def top_20_tasks(self, request, *args, **kwargs):
-        last_month = timezone.now().month
-        last_year = timezone.now().year
-        queryset = Task.objects.annotate(
-            total_duration=Sum(
+        current_month = datetime.today().replace(day=1)
+        queryset = Task.objects.annotate(total_duration=Sum(
                 'task_timelog_set__duration',
                 filter=Q(
-                    task_timelog_set__started_at__month=last_month,
-                    task_timelog_set__started_at__year=last_year
-
-                )
-            )
-        ).filter(
-            Exists(
-                TimeLog.objects.filter(
-                    task=OuterRef('pk')
+                    task_timelog_set__started_at__gte=current_month
                 )
             )
         ).filter(total_duration__isnull=False).order_by('-total_duration')[:20]

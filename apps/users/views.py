@@ -1,3 +1,4 @@
+from datetime import datetime
 
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -41,11 +42,8 @@ class UserListViewSet(ListModelMixin, GenericViewSet):
     @action(detail=False, methods=['GET'], url_path='last-month-logs', serializer_class=Serializer)
     def last_month_logs(self, request, *args, **kwargs):
         user = self.request.user
-        last_month = timezone.now().month
-        last_year = timezone.now().year
-
-        logs = TimeLog.objects.filter(user=user, started_at__month=last_month,
-                                      started_at__year=last_year).aggregate(Sum('duration'))
+        current_month = datetime.today().replace(day=1)
+        logs = TimeLog.objects.filter(user=user, started_at__gte=current_month).aggregate(Sum('duration'))
         if logs['duration__sum']:
             minutes = logs['duration__sum'].total_seconds()/60
 

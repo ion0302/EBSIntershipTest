@@ -1,4 +1,7 @@
 import random
+from itertools import islice
+
+from faker import Faker
 
 from django.contrib.auth.models import User
 
@@ -15,13 +18,19 @@ class Command(BaseCommand):
         parser.add_argument('total', type=int, help='Indicates the number of tasks to be created')
 
     def handle(self, *args, **kwargs):
+        fake = Faker()
         total = kwargs['total']
         users_id = list(User.objects.values_list('id', flat=True))
         if users_id:
-            for i in range(total):
-                Task.objects.create(title=get_random_string(length=15),
-                                    description=get_random_string(length=200),
-                                    created_by_id=random.choice(users_id),
-                                    assigned_to_id=random.choice(users_id),
-                                    is_completed=random.choice([True, False]))
+            batch_size = total
+            objs = (Task(title=fake.name(),
+                         description=fake.text(),
+                         assigned_to_id=random.choice(users_id),
+                         created_by_id=random.choice(users_id)) for i in range(total))
+            while True:
+                batch = list(islice(objs, batch_size))
+                if not batch:
+                    break
+                Task.objects.bulk_create(batch, batch_size)
+
             self.stdout.write(self.style.SUCCESS('Successfully added tasks'))
